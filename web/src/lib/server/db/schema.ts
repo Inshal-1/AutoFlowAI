@@ -89,7 +89,8 @@ export const apikey = pgTable('api_key', {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 	permissions: text('permissions'),
-	metadata: text('metadata')
+	metadata: text('metadata'),
+	configId: text('config_id')
 });
 
 export const llmConfig = pgTable('llm_config', {

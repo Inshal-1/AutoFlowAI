@@ -90,6 +90,7 @@ export const apikey = pgTable("api_key", {
     .notNull(),
   permissions: text("permissions"),
   metadata: text("metadata"),
+  configId: text("config_id"),
 });
 
 export const llmConfig = pgTable("llm_config", {
