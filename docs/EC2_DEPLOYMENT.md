@@ -118,7 +118,13 @@ server {
 
 Enable the site and restart Nginx:
 ```bash
-sudo ln -s /etc/nginx/sites-available/autoflow /etc/nginx/sites-enabled/
+# 1. Force recreate the link to handle potential broken links
+sudo ln -sf /etc/nginx/sites-available/autoflow /etc/nginx/sites-enabled/
+
+# 2. Disable the default nginx page
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# 3. Test and restart
 sudo nginx -t
 sudo systemctl restart nginx
 ```
