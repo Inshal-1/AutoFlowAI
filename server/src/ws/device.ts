@@ -2,7 +2,7 @@ import type { ServerWebSocket } from "bun";
 import type { DeviceMessage } from "@autoflow/shared";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db.js";
-import { apikey, llmConfig, device } from "../schema.js";
+import { apiKey, llmConfig, device } from "../schema.js";
 import { sessions, type WebSocketData } from "./sessions.js";
 import { runPipeline } from "../agent/pipeline.js";
 import type { LLMConfig } from "../agent/llm.js";
@@ -93,9 +93,9 @@ export async function handleDeviceMessage(
       // Hash the incoming key and look it up directly in the DB
       const hashedKey = await hashApiKey(msg.apiKey);
       const rows = await db
-        .select({ id: apikey.id, userId: apikey.userId, enabled: apikey.enabled, expiresAt: apikey.expiresAt })
-        .from(apikey)
-        .where(eq(apikey.key, hashedKey))
+        .select({ id: apiKey.id, userId: apiKey.referenceId, enabled: apiKey.enabled, expiresAt: apiKey.expiresAt })
+        .from(apiKey)
+        .where(eq(apiKey.key, hashedKey))
         .limit(1);
 
       if (rows.length === 0 || !rows[0].enabled) {

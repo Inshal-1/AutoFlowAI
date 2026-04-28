@@ -63,13 +63,13 @@ export const verification = pgTable("verification", {
     .notNull(),
 });
 
-export const apikey = pgTable("api_key", {
+export const apiKey = pgTable("api_key", {
   id: text("id").primaryKey(),
   name: text("name"),
   start: text("start"),
   prefix: text("prefix"),
   key: text("key").notNull(),
-  userId: text("user_id")
+  referenceId: text("reference_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   refillInterval: integer("refill_interval"),
@@ -80,7 +80,7 @@ export const apikey = pgTable("api_key", {
   rateLimitTimeWindow: integer("rate_limit_time_window").default(86400000),
   rateLimitMax: integer("rate_limit_max").default(10),
   requestCount: integer("request_count").default(0),
-  remaining: integer("remaining"),
+  remaining: integer("remaining").default(10),
   lastRequest: timestamp("last_request"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -90,7 +90,7 @@ export const apikey = pgTable("api_key", {
     .notNull(),
   permissions: text("permissions"),
   metadata: text("metadata"),
-  configId: text("config_id"),
+  configId: text("config_id").default("default")
 });
 
 export const llmConfig = pgTable("llm_config", {
