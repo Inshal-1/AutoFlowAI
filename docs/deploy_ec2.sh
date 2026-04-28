@@ -59,6 +59,7 @@ BETTER_AUTH_SECRET="$AUTH_SECRET"
 BETTER_AUTH_URL="http://$PUBLIC_IP"
 SERVER_URL="http://$PUBLIC_IP/ws"
 PUBLIC_SERVER_WS_URL="ws://$PUBLIC_IP/ws"
+ORIGIN="http://$PUBLIC_IP"
 EOF
 
 # 6. Install Deps and Build
@@ -66,7 +67,7 @@ echo -e "${BLUE}6. Installing Node Modules and Building Frontend...${NC}"
 bun install
 bun run db:push
 # Pass secrets to build explicitly to ensure they are baked in
-BETTER_AUTH_SECRET="$AUTH_SECRET" BETTER_AUTH_URL="http://$PUBLIC_IP" bun run build
+BETTER_AUTH_SECRET="$AUTH_SECRET" BETTER_AUTH_URL="http://$PUBLIC_IP" ORIGIN="http://$PUBLIC_IP" bun run build
 
 # 7. Setup PM2
 echo -e "${BLUE}7. Configuring PM2 Process Manager...${NC}"
@@ -99,6 +100,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
     }
 
@@ -108,6 +112,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
