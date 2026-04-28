@@ -1,98 +1,63 @@
-# AutoFlow Project Overview
-
-AutoFlow is an autonomous AI agent that controls Android devices through a **Perception → Reasoning → Action** loop. It interprets the Android accessibility tree to operate devices intelligently without requiring specific app APIs.
-
-## Architecture
-
-The project is a monorepo managed with **Bun**:
-
-- **Agent Core (`src/`)**: The main TypeScript logic for the agent loop, LLM integration, and ADB interactions.
-  - `kernel.ts`: Main entry point for the agent.
-  - `llm-providers.ts`: Integration with Groq, OpenAI, Ollama, Bedrock, etc., via Vercel AI SDK.
-  - `actions.ts`: ADB-based actions (tap, type, swipe, etc.).
-  - `skills.ts`: Multi-step high-level actions (submit_message, read_screen, etc.).
-  - `sanitizer.ts`: Processes the accessibility XML into a compact format for the LLM.
-- **Backend (`server/`)**: Hono-based server that manages device connections and session data.
-  - Uses WebSockets for real-time communication between the dashboard and the agent/device.
-  - Integrates with `better-auth` for authentication.
-- **Web Dashboard (`web/`)**: SvelteKit application for monitoring agents, managing devices, and configuring goals.
-  - Uses TailwindCSS for styling and Drizzle ORM for database access.
-- **Android Companion (`android/`)**: Kotlin-based app that provides accessibility and screen capture permissions to the agent.
-- **Shared Package (`packages/shared/`)**: Common types and protocols used across the agent, server, and web.
-
-## Key Technologies
-
-- **Runtime**: Bun
-- **Languages**: TypeScript, Kotlin, SQL (PostgreSQL)
-- **Frontend**: SvelteKit, TailwindCSS
-- **Backend**: Hono, Bun.serve (WebSockets)
-- **Database**: PostgreSQL (Neon), Drizzle ORM
-- **AI**: Vercel AI SDK (OpenAI, Groq, Ollama, etc.)
-- **Device Control**: ADB (Android Debug Bridge)
-
-## Building and Running
-
-### Prerequisites
-- [Bun](https://bun.sh/) installed.
-- Android device with ADB enabled and connected.
-- PostgreSQL database (e.g., [Neon](https://neon.tech)).
-
-### Installation
-```bash
-bun install
-```
-
-### Database Setup
-Copy `.env.example` to `.env` and `web/.env.example` to `web/.env`, then set your `DATABASE_URL`.
-```bash
-# Push schema to database
-bun run db:push
-```
-
-### Starting the Dashboard and Server
-```bash
-bun run dev
-```
-Visit `http://localhost:5173` to access the dashboard.
-
-### Running the Agent
-The agent can be run in several modes:
-
-**Interactive Mode:**
-```bash
-bun run src/kernel.ts
-```
-
-**Workflow Mode (Multi-step AI):**
-```bash
-bun run src/kernel.ts --workflow examples/workflows/productivity/morning-briefing.json
-```
-
-**Flow Mode (Deterministic YAML):**
-```bash
-bun run src/kernel.ts --flow examples/flows/toggle-wifi.yaml
-```
-
-### Android App
-Build and install the companion app:
-```bash
-cd android
-./gradlew installDebug
-```
-
-## Development Conventions
-
-- **Surgical Actions**: Prefer adding high-level "skills" in `src/skills.ts` for complex multi-step UI interactions to reduce LLM token usage and improve reliability.
-- **Type Safety**: Use the shared types in `packages/shared/src/types.ts` for any communication between components.
-- **ADB Dependency**: Most agent actions rely on `runAdbCommand` in `src/actions.ts`. Ensure your environment has `adb` in the PATH.
-- **Logging**: The agent logs sessions to the `logs/` directory using `SessionLogger`.
-- **Environment Variables**: Managed via `.env` files. Key variables include `DATABASE_URL`, `LLM_PROVIDER`, and provider-specific API keys.
-
-## Important Directories
-
-- `src/`: Core agent logic and loop.
-- `server/src/`: Backend API and WebSocket handlers.
-- `web/src/`: SvelteKit frontend source.
-- `android/app/src/main/`: Android companion app source.
-- `examples/`: Sample workflows (JSON) and flows (YAML).
-- `docs/`: Additional documentation and plans.
+# AutoFlow AI Project Overview
+
+AutoFlow is an autonomous AI agent ecosystem designed to control Android devices through a **Perception → Reasoning → Action** loop. By interpreting the Android accessibility tree and executing actions via ADB, it operates devices intelligently without requiring third-party APIs.
+
+## 🚀 Quick Links
+- **One-Click EC2 Setup:** `docs/deploy_ec2.sh`
+- **Master Guide:** `docs/FULL_GUIDE.md`
+- **EC2 Manual Guide:** `docs/EC2_DEPLOYMENT.md`
+- **AWS App Runner/RDS Guide:** `docs/AWS_DEPLOYMENT.md`
+
+## 🏗️ Architecture
+
+AutoFlow is a **Bun-managed monorepo**:
+
+- **Agent Core (`src/`)**: The TypeScript "Kernel" that handles the agent loop, LLM reasoning, and ADB interactions.
+- **Backend (`server/`)**: A Hono-based server managing WebSocket connections between the dashboard and devices.
+- **Web Dashboard (`web/`)**: A SvelteKit application for real-time device monitoring and goal management.
+- **Android Companion (`android/`)**: A Kotlin-based app providing necessary permissions to the agent.
+- **Shared Package (`packages/shared/`)**: Shared types and communication protocols.
+
+## 🛠️ Technology Stack
+
+- **Runtime:** Bun (primary), Node.js (for PM2)
+- **Frontend:** SvelteKit, TailwindCSS
+- **Backend:** Hono, Bun.serve (WebSockets)
+- **Database:** PostgreSQL (RDS or local), Drizzle ORM
+- **Auth:** Better-Auth (Modular @better-auth/api-key)
+- **AI:** Vercel AI SDK (Groq, OpenAI, AWS Bedrock)
+- **Deployment:** Nginx (Reverse Proxy), PM2 (Process Management)
+
+## 📦 Deployment & Running
+
+### Automated Deployment (Ubuntu 24.04 EC2)
+We recommend an **m7i-flex.large** instance for optimal build performance.
+```bash
+git clone https://github.com/Inshal-1/AutoFlowAI.git AutoFlow
+cd AutoFlow
+chmod +x docs/deploy_ec2.sh
+./docs/deploy_ec2.sh
+```
+
+### Key Commands
+- **Install:** `bun install`
+- **Migrate DB:** `bun run db:push`
+- **Build Web:** `bun run build`
+- **Start Agent:** `bun run src/kernel.ts`
+- **Monitor Logs:** `pm2 logs`
+
+## 📝 Development Conventions
+
+- **Modular Plugins:** Always use `@better-auth/api-key` for authentication plugins.
+- **Environment:** Secrets and URLs must be synchronized across `server/.env` and `web/.env`.
+- **SvelteKit Origin:** In production, the `ORIGIN` environment variable is required to bypass CSRF protection.
+- **WebSocket Pathing:** Nginx routes all backend traffic through the `/ws` path for standardized socket handling.
+
+## 📂 Important Directories
+
+- `src/`: Core agent logic.
+- `server/src/`: Backend API and WebSocket sessions.
+- `web/src/`: Dashboard source code.
+- `android/`: Companion app source.
+- `docs/`: Deployment scripts and comprehensive guides.
+- `examples/`: Sample AI Workflows (JSON) and Deterministic Flows (YAML).
