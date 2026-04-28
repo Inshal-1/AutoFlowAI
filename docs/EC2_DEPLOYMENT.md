@@ -44,7 +44,7 @@ sudo apt install -y nginx git
 
 ```bash
 # 1. Clone the repository
-git clone <your-repo-url> AutoFlow
+git clone https://github.com/Inshal-1/AutoFlowAI.git AutoFlow
 cd AutoFlow
 
 # 2. Install dependencies
@@ -54,6 +54,10 @@ bun install
 # Update DATABASE_URL and BETTER_AUTH_SECRET in these files
 cp .env.example .env
 cp web/.env.example web/.env
+
+# 4. Run Database Migrations
+# This creates the necessary tables in your RDS or local Postgres
+bun run db:push
 ```
 
 ---
@@ -70,9 +74,9 @@ bun add -g pm2
 bun run build
 
 # 3. Start services
-# Note: Adjust ports if your config differs (default: 3000 for web, 4000 for server)
-pm2 start "bun run --cwd server start" --name autoflow-server
-pm2 start "bun run --cwd web start" --name autoflow-web
+# We start the backend server and the web dashboard
+pm2 start "bun run dev:server" --name autoflow-server
+pm2 start "bun run start" --name autoflow-web
 
 # 4. Ensure PM2 starts on boot
 pm2 save
