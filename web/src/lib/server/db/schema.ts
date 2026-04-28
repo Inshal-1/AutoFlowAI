@@ -83,8 +83,11 @@ export const apikey = pgTable('apikey', {
 	remaining: integer('remaining'),
 	lastRequest: timestamp('last_request'),
 	expiresAt: timestamp('expires_at'),
-	createdAt: timestamp('created_at').notNull(),
-	updatedAt: timestamp('updated_at').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at')
+		.defaultNow()
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
 	permissions: text('permissions'),
 	metadata: text('metadata')
 });
