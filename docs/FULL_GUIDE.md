@@ -8,89 +8,67 @@ AutoFlow (formerly PocketAgent) is an open-source autonomous AI agent designed t
 
 AutoFlow is an agentic system that acts as a "human in the machine." Instead of using restricted APIs (which many apps don't have), it uses the **Android Accessibility Tree** to see the screen and **ADB (Android Debug Bridge)** to interact with it.
 
-### The Perception-Reasoning-Action Loop:
-1.  **Perception:** The agent dumps the UI XML of the current screen. It identifies buttons, text fields, and images.
-2.  **Reasoning:** The UI state and the user's goal are sent to an LLM (Claude, GPT, or Groq). The LLM "thinks" about the next step and returns a structured action (e.g., "Tap the Search bar").
-3.  **Action:** The agent executes the tap, swipe, or text entry via ADB and waits for the screen to update.
-
 ---
 
 ## 2. Technology Stack
 
-- **Runtime:** [Bun](https://bun.sh/) — Used for its extreme speed and native support for TypeScript and WebSockets.
-- **Backend:** [Hono](https://hono.dev/) — A lightweight web framework running on the server to manage device connections.
-- **Frontend:** [SvelteKit](https://kit.svelte.dev/) — The dashboard for real-time monitoring of your agent.
+- **Runtime:** [Bun](https://bun.sh/) — Primary runtime.
+- **Process Management:** [PM2](https://pm2.io/) — Requires **Node.js** to be installed.
+- **Backend:** [Hono](https://hono.dev/) — Port 4000.
+- **Frontend:** [SvelteKit](https://kit.svelte.dev/) — Port 3000.
 - **Database:** [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/).
-- **Auth:** [Better-Auth](https://www.better-auth.com/) — Manages user sessions and API keys.
-- **AI Integration:** [Vercel AI SDK](https://sdk.vercel.ai/) — Allows swapping between Groq, OpenAI, and AWS Bedrock easily.
+- **Auth:** [Better-Auth](https://www.better-auth.com/) — Simplified with a manual API Key bypass for stability.
 
 ---
 
 ## 3. Project Architecture
 
 The project is a **Monorepo**:
-- `/src`: The **Kernel** (the brain of the agent). This is what you run to start a task.
-- `/server`: The **API Server** that coordinates between your dashboard and your devices.
+- `/src`: The **Kernel** (the brain of the agent).
+- `/server`: The **API Server**.
 - `/web`: The **Dashboard** UI.
-- `/android`: The **Companion App** that must be installed on the phone to grant accessibility permissions.
-- `/packages/shared`: Common types and communication protocols.
+- `/android`: The **Companion App**.
 
 ---
 
-## 4. Operational Modes
+## 4. Production Deployment (EC2)
 
-### A. Interactive Mode
-You type a goal (e.g., "Order a pepperoni pizza from Domino's"), and the agent figures it out step-by-step.
+### Automated Setup
+The recommended way to deploy is using the provided script on a fresh **Ubuntu 24.04** instance (preferably **m7i-flex.large**):
+
 ```bash
-bun run src/kernel.ts
+git clone https://github.com/Inshal-1/AutoFlowAI.git AutoFlow
+cd AutoFlow
+chmod +x docs/deploy_ec2.sh
+./docs/deploy_ec2.sh
 ```
 
-### B. Workflows (AI-Powered)
-JSON files that define complex, multi-app goals. The LLM handles the logic between steps.
+### Manual Configuration Highlights
+- **ORIGIN:** SvelteKit requires `ORIGIN=http://your-ip` to allow form submissions (Login/Signup).
+- **Reverse Proxy:** Nginx must pass `X-Forwarded-Proto` and `Host` headers to prevent 403 Forbidden errors.
+- **API Keys:** We use a custom bypass logic that writes directly to the `api_key` table, avoiding `better-auth` plugin schema conflicts.
+
+---
+
+## 5. Common Troubleshooting
+
+### "403 Forbidden" on Login
+This is CSRF protection. Ensure your `web/.env` has `ORIGIN=http://your-ip` and your Nginx config has the correct headers.
+
+### "500 Internal Error" on API Keys
+We solved this by:
+1.  Renaming the table to `api_key`.
+2.  Adding `configId` and `referenceId` fields.
+3.  Bypassing the strict plugin and inserting records directly into the DB.
+
+### Database Sync
+If you change the schema, always run:
 ```bash
-bun run src/kernel.ts --workflow examples/workflows/research/weather-to-whatsapp.json
+bun run db:push
 ```
 
-### C. Flows (Deterministic)
-YAML files that act like high-speed macros. No AI is used; it just clicks exactly what you tell it to. Ideal for repetitive daily tasks.
-```bash
-bun run src/kernel.ts --flow examples/flows/toggle-wifi.yaml
-```
-
 ---
 
-## 5. Deployment Options
-
-### Local (For Testing)
-Run everything on your laptop with your phone plugged in via USB.
-
-### EC2 (For 24/7 Monitoring)
-Deploy to an AWS instance (like `m7i-flex.large`) to manage your "phone farm" remotely.
-- **Script:** Use `docs/deploy_ec2.sh` for an automated setup.
-- **Manual:** Follow `docs/EC2_DEPLOYMENT.md`.
-
-### Cloud Native
-Deploy to **AWS App Runner** or **ECS** using the Docker instructions in `docs/AWS_DEPLOYMENT.md`.
-
----
-
-## 6. Common Troubleshooting
-
-### "Bun command not found"
-Bun is not in `apt`. Install it via: `curl -fsSL https://bun.sh/install | bash`.
-
-### "TypeError: URL cannot be parsed"
-This means your `DATABASE_URL` in `.env` is missing or incorrect. It must start with `postgresql://`.
-
-### "Missing apiKey specifier in better-auth"
-We fixed this by modularizing the plugins. Always ensure you run `bun install` after pulling the latest code to get the `@better-auth/api-key` package.
-
-### PM2 Errors
-Remember that PM2 requires **Node.js** to be installed on the system, even if you are using Bun for the app logic. Install it with `sudo apt install nodejs npm`.
-
----
-
-## 7. Security Best Practices
-- **VPC Security Groups:** Only open port 80/443 to the public. Keep port 5432 (Postgres) closed or restricted to the server's IP.
-- **API Keys:** Never commit your `.env` files to Git.
-- **ADB over Network:** If using ADB over WiFi, use a VPN or SSH tunnel to prevent unauthorized access to your phone.
+## 6. Security
+- Keep Port 5432 (Postgres) restricted.
+- Use `sudo certbot --nginx` to enable HTTPS in production.

@@ -9,11 +9,5 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
-  plugins: [
-    apiKey({
-      rateLimit: {
-        enabled: false,
-      },
-    }),
-  ],
+  plugins: [],
 });

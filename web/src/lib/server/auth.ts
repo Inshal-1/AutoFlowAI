@@ -13,7 +13,7 @@ export const auth = betterAuth({
 		provider: 'pg',
 		schema
 	}),
-	plugins: [sveltekitCookies(getRequestEvent), apiKey()],
+	plugins: [sveltekitCookies(getRequestEvent)],
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: false
