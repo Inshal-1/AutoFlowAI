@@ -43,24 +43,30 @@ echo -e "${BLUE}4. Setting up Application...${NC}"
 echo -e "${BLUE}5. Configuring Environment Variables...${NC}"
 DB_URL="postgresql://autoflow_user:$DB_PASSWORD@localhost:5432/autoflow_db"
 AUTH_SECRET=$(openssl rand -base64 32)
+PUBLIC_IP=$(curl -s ifconfig.me)
 
 cat <<EOF > .env
 DATABASE_URL="$DB_URL"
 BETTER_AUTH_SECRET="$AUTH_SECRET"
+BETTER_AUTH_URL="http://$PUBLIC_IP"
+PORT=4000
 LLM_PROVIDER="openai"
 EOF
 
 cat <<EOF > web/.env
 DATABASE_URL="$DB_URL"
 BETTER_AUTH_SECRET="$AUTH_SECRET"
-BETTER_AUTH_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://$PUBLIC_IP"
+SERVER_URL="http://$PUBLIC_IP/ws"
+PUBLIC_SERVER_WS_URL="ws://$PUBLIC_IP/ws"
 EOF
 
 # 6. Install Deps and Build
 echo -e "${BLUE}6. Installing Node Modules and Building Frontend...${NC}"
 bun install
 bun run db:push
-bun run build
+# Pass secrets to build explicitly to ensure they are baked in
+BETTER_AUTH_SECRET="$AUTH_SECRET" BETTER_AUTH_URL="http://$PUBLIC_IP" bun run build
 
 # 7. Setup PM2
 echo -e "${BLUE}7. Configuring PM2 Process Manager...${NC}"
