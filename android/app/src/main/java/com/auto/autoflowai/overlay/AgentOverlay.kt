@@ -1,0 +1,117 @@
+package com.auto.autoflow.overlay
+
+import android.content.Intent
+import android.graphics.PixelFormat
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.auto.autoflow.MainActivity
+
+class AgentOverlay(private val service: LifecycleService) {
+
+    private val windowManager = service.getSystemService(WindowManager::class.java)
+    private var composeView: ComposeView? = null
+
+    private val savedStateOwner = object : SavedStateRegistryOwner {
+        private val controller = SavedStateRegistryController.create(this)
+        override val lifecycle: Lifecycle get() = service.lifecycle
+        override val savedStateRegistry: SavedStateRegistry get() = controller.savedStateRegistry
+        init { controller.performRestore(null) }
+    }
+
+    @Suppress("DEPRECATION")
+    private val overlayType = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    } else {
+        WindowManager.LayoutParams.TYPE_PHONE
+    }
+
+    private val layoutParams = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.WRAP_CONTENT,
+        WindowManager.LayoutParams.WRAP_CONTENT,
+        overlayType,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+        PixelFormat.TRANSLUCENT
+    ).apply {
+        gravity = Gravity.TOP or Gravity.START
+        x = 0
+        y = 200
+    }
+
+    fun show() {
+        if (composeView != null) return
+
+        val view = ComposeView(service).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            setViewTreeLifecycleOwner(service)
+            setViewTreeSavedStateRegistryOwner(savedStateOwner)
+            setContent { OverlayContent() }
+            setupDrag(this)
+        }
+
+        composeView = view
+        windowManager.addView(view, layoutParams)
+    }
+
+    fun hide() {
+        composeView?.let {
+            windowManager.removeView(it)
+        }
+        composeView = null
+    }
+
+    fun destroy() {
+        hide()
+    }
+
+    private fun setupDrag(view: View) {
+        var initialX = 0
+        var initialY = 0
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+
+        view.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = layoutParams.x
+                    initialY = layoutParams.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = (event.rawX - initialTouchX).toInt()
+                    val dy = (event.rawY - initialTouchY).toInt()
+                    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) isDragging = true
+                    layoutParams.x = initialX + dx
+                    layoutParams.y = initialY + dy
+                    windowManager.updateViewLayout(view, layoutParams)
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        val intent = Intent(service, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        }
+                        service.startActivity(intent)
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+}

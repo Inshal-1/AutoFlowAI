@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    expose:
+      - "8080"
+    restart: always
+    environment:
+      - PORT=8080
+      - DATABASE_URL=${DATABASE_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${ORIGIN}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    expose:
+      - "3000"
+    restart: always
+    environment:
+      - ORIGIN=${ORIGIN}
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+      - SERVER_URL=http://server:8080
+      - PUBLIC_SERVER_WS_URL=${PUBLIC_SERVER_WS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${ORIGIN}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+
+  site:
+    build:
+      context: ./site
+      dockerfile: Dockerfile
+    expose:
+      - "80"
+    restart: always

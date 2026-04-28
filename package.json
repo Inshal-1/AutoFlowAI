@@ -1,0 +1,38 @@
+{
+  "name": "autoflow",
+  "private": true,
+  "packageManager": "bun@1.3.5",
+  "workspaces": ["packages/*", "server", "web"],
+  "version": "1.0.0",
+  "description": "AI agent that takes control of your Android phone — give it a goal, it figures out the taps",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"bun run dev:server\" \"bun run dev:web\" --kill-others --names \"SERVER,WEB\"",
+    "start": "bun run --cwd web start",
+    "build": "bun run --cwd web build",
+    "start:agent": "bun run src/kernel.ts",
+    "build:agent": "bun build src/kernel.ts --outdir dist --target bun",
+    "build:web": "bun run --cwd web build",
+    "dev:web": "bun run --cwd web dev",
+    "start:server": "bun run --cwd server start",
+    "dev:server": "bun run --cwd server dev",
+    "db:push": "bun run --cwd web db:push",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.700.0",
+    "@openrouter/ai-sdk-provider": "^2.1.1",
+    "ai": "^6.0.72",
+    "fast-xml-parser": "^4.5.0",
+    "js-yaml": "^4.1.1",
+    "openai": "^4.73.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/js-yaml": "^4.0.9",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.6.0"
+  }
+}

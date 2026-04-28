@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="crimson_red">#FFC62828</color>
+    <color name="crimson_red_light">#FFEF5350</color>
+    <color name="charcoal_dark">#FF212121</color>
+    <color name="charcoal_light">#FF424242</color>
+    <color name="golden_accent">#FFFFB300</color>
+    <color name="surface_dark">#FF1A1A1A</color>
+    <color name="background_dark">#FF121212</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="ic_launcher_background">#FF121212</color>
+</resources>

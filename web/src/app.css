@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+	--font-sans: 'Google Sans', 'Google Sans Text', system-ui, -apple-system, sans-serif;
+}
+
+a, button, [role="button"], input[type="submit"], select, summary {
+	cursor: pointer;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Ask Gemini about pa.rpaby.pw and share to WhatsApp",
+  "steps": [
+    {
+      "app": "com.google.android.apps.bard",
+      "goal": "Type 'tell me more about pa.rpaby.pw' in the text input field and tap send. Wait for the full AI response to load before marking done.",
+      "maxSteps": 10
+    },
+    {
+      "goal": "Use find_and_tap with query 'Copy' to find and tap the Copy button. It will automatically scroll down to find it. Mark done after it completes.",
+      "maxSteps": 5
+    },
+    {
+      "app": "com.whatsapp",
+      "goal": "Open the chat with contact 'Vi'. If Vi is visible in the chat list, tap it. If not, search for 'vi' and tap the result. Mark done once inside the chat.",
+      "maxSteps": 8
+    },
+    {
+      "goal": "Tap the message input field, paste clipboard content, then tap Send.",
+      "maxSteps": 8
+    }
+  ]
+}
