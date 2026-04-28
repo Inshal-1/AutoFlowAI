@@ -63,7 +63,7 @@ export const verification = pgTable('verification', {
 		.notNull()
 });
 
-export const apikey = pgTable('apikey', {
+export const apikey = pgTable('api_key', {
 	id: text('id').primaryKey(),
 	name: text('name'),
 	start: text('start'),
