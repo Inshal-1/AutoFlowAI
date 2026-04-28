@@ -9,6 +9,12 @@
  * actions directly via the WebSocket companion app.
  */
 
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime";
+import { env } from "../env.js";
+
 // ─── Types ──────────────────────────────────────────────────────
 
 export interface LLMConfig {
@@ -363,19 +369,114 @@ const DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4o",
   groq: "llama-3.3-70b-versatile",
   openrouter: "google/gemini-2.0-flash-001",
+  bedrock: "anthropic.claude-3-5-sonnet-20240620-v1:0",
 };
 
 function getDefaultModel(provider: string): string {
   return DEFAULT_MODELS[provider] ?? "gpt-4o";
 }
 
+class BedrockProvider implements LLMProvider {
+  private client: BedrockRuntimeClient;
+  private model: string;
+
+  constructor(model: string) {
+    this.client = new BedrockRuntimeClient({
+      region: env.AWS_REGION,
+      credentials:
+        env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
+          ? {
+              accessKeyId: env.AWS_ACCESS_KEY_ID,
+              secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+            }
+          : undefined,
+    });
+    this.model = model;
+  }
+
+  async getAction(
+    systemPrompt: string,
+    userPrompt: string,
+    imageBase64?: string,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const isAnthropic = this.model.includes("anthropic");
+    const isMeta = this.model.includes("meta");
+
+    let body: any;
+
+    if (isAnthropic) {
+      const messages: any[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: userPrompt }],
+        },
+      ];
+
+      if (imageBase64) {
+        messages[0].content.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: "image/png",
+            data: imageBase64,
+          },
+        });
+      }
+
+      body = {
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
+        temperature: 0.2,
+      };
+    } else if (isMeta) {
+      body = {
+        prompt: `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${systemPrompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n${userPrompt}\n\nRespond with ONLY a valid JSON object.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`,
+        max_gen_len: 1024,
+        temperature: 0.2,
+      };
+    } else {
+      body = {
+        inputText: `${systemPrompt}\n\n${userPrompt}\n\nRespond with ONLY a valid JSON object.`,
+        textGenerationConfig: {
+          maxTokenCount: 1024,
+          temperature: 0.2,
+        },
+      };
+    }
+
+    const command = new InvokeModelCommand({
+      modelId: this.model,
+      body: new TextEncoder().encode(JSON.stringify(body)),
+      contentType: "application/json",
+      accept: "application/json",
+    });
+
+    const response = await this.client.send(command, { abortSignal: signal });
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+    if (isAnthropic) {
+      return responseBody.content[0].text;
+    }
+    if (isMeta) {
+      return responseBody.generation;
+    }
+    return responseBody.results[0].outputText;
+  }
+}
+
 /**
- * Creates an OpenAI-compatible LLM provider.
- * Works with OpenAI, Groq, and OpenRouter since they all share the
- * same /chat/completions API format.
+ * Creates an LLM provider based on config.
  */
 export function getLlmProvider(config: LLMConfig): LLMProvider {
-  const baseUrl = config.baseUrl ?? BASE_URLS[config.provider] ?? BASE_URLS.openai;
+  if (config.provider === "bedrock") {
+    return new BedrockProvider(config.model ?? getDefaultModel("bedrock"));
+  }
+
+  const baseUrl =
+    config.baseUrl ?? BASE_URLS[config.provider] ?? BASE_URLS.openai;
   const model = config.model ?? getDefaultModel(config.provider);
 
   return {

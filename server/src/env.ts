@@ -6,6 +6,9 @@ export const env = {
   POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN || "",
   POLAR_ORGANIZATION_ID: process.env.POLAR_ORGANIZATION_ID || "",
   POLAR_SANDBOX: process.env.POLAR_SANDBOX || "false",
+  AWS_REGION: process.env.AWS_REGION || "us-east-1",
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
 };
 
 if (!env.DATABASE_URL) {
