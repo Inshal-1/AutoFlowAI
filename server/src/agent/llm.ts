@@ -453,11 +453,44 @@ function sanitizeJsonText(raw: string): string {
 }
 
 export function parseJsonResponse(raw: string): Record<string, unknown> | null {
-  try { return JSON.parse(raw); } catch {}
-  try { return JSON.parse(sanitizeJsonText(raw)); } catch {}
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(sanitizeJsonText(match[0])); } catch {}
+  // 1. Clean markdown artifacts
+  let cleaned = raw.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(json)?/, "").replace(/```$/, "").trim();
   }
+
+  const parse = (text: string): Record<string, any> | null => {
+    try {
+      let data = JSON.parse(text);
+      // Handle array wrap: [ { "action": ... } ]
+      if (Array.isArray(data) && data.length > 0) data = data[0];
+      if (typeof data !== "object" || data === null) return null;
+
+      // Handle common field aliases from creative LLMs
+      if (!data.coordinates && data.action_location) data.coordinates = data.action_location;
+      if (!data.coordinates && data.point) data.coordinates = data.point;
+      if (!data.reason && data.thought) data.reason = data.thought;
+
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  // Try direct parse
+  let result = parse(cleaned);
+  if (result) return result;
+
+  // Try sanitized parse
+  result = parse(sanitizeJsonText(cleaned));
+  if (result) return result;
+
+  // Try regex extraction for {...} or [...]
+  const match = cleaned.match(/(\{|\[)[\s\S]*(\}|\])/);
+  if (match) {
+    result = parse(sanitizeJsonText(match[0]));
+    if (result) return result;
+  }
+
   return null;
 }
