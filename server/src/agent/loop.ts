@@ -221,7 +221,7 @@ function actionToCommand(
       return { type: "open_settings", setting: action.setting };
 
     case "wait":
-      return { type: "wait", duration: 2000 };
+      return { type: "wait", duration: 500 };
 
     case "intent":
       return {
@@ -641,7 +641,7 @@ export async function runAgentLoop(
 
       // ── 10. Brief pause for UI to settle ────────────────────
       if (signal?.aborted) break;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   } catch (error) {
     console.error(`[Agent ${sessionId}] Loop error: ${error}`);
