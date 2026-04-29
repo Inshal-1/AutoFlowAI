@@ -179,7 +179,8 @@ export async function runPipeline(
 
     const execResult = await executeResult(deviceId, parseResult);
     if (execResult.success) {
-      await new Promise((r) => setTimeout(r, 1500));
+      // Reduced delay from 1500ms to 100ms
+      await new Promise((r) => setTimeout(r, 100));
 
       const sessionId = persistentDeviceId
         ? await persistQuickSession(userId, persistentDeviceId, goal, "parser", parseResult as unknown as Record<string, unknown>)
@@ -223,7 +224,7 @@ export async function runPipeline(
   if (classResult.type === "intent") {
     const execResult = await executeResult(deviceId, classResult);
     if (execResult.success) {
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 100));
 
       const sessionId = persistentDeviceId
         ? await persistQuickSession(userId, persistentDeviceId, goal, "classifier", classResult.intent as unknown as Record<string, unknown>)
@@ -268,7 +269,7 @@ export async function runPipeline(
         type: "launch",
         packageName: appToLaunch,
       });
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 500));
       console.log(`[Pipeline] Launched ${appToLaunch} for UI agent`);
     } catch (err) {
       console.warn(`[Pipeline] Failed to launch ${appToLaunch}: ${err}`);
