@@ -244,6 +244,7 @@ export async function handleDeviceMessage(
           provider: cfg.provider,
           apiKey: cfg.apiKey,
           model: cfg.model ?? undefined,
+          userId: userId,
         };
       } catch (err) {
         console.error(`[Agent] Failed to fetch LLM config for user ${userId}:`, err);

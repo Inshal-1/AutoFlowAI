@@ -73,6 +73,7 @@ goals.post("/", async (c) => {
         provider: cfg.provider,
         apiKey: cfg.apiKey,
         model: body.llmModel ?? cfg.model ?? undefined,
+        userId: user.id,
       };
     } else if (process.env.LLM_API_KEY) {
       llmCfg = {

@@ -101,11 +101,23 @@ export const llmConfig = pgTable("llm_config", {
   provider: text("provider").notNull(),
   apiKey: text("api_key").notNull(),
   model: text("model"),
+  enabledModels: text("enabled_models"), // Comma-separated list of models to cycle through
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
+});
+
+export const llmModelStatus = pgTable("llm_model_status", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  keyHash: text("key_hash").notNull(),
+  modelId: text("model_id").notNull(),
+  isAvailable: boolean("is_available").default(true).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const device = pgTable("device", {
