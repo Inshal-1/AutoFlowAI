@@ -12,11 +12,6 @@
 	// Manage keys as a list
 	let keyList = $state(config?.apiKey ? config.apiKey.split(';').map(k => k.trim()) : ['']);
 
-	// Keep the form field in sync with the list
-	$effect(() => {
-		updateConfig.fields.apiKey.value = keyList.filter(k => k.trim()).join(';');
-	});
-
 	function addKey() {
 		keyList = [...keyList, ''];
 	}
@@ -25,14 +20,22 @@
 		if (keyList.length > 1) {
 			keyList = keyList.filter((_, i) => i !== index);
 		} else {
-			keyList = [''];
+			keyList[0] = '';
 		}
 	}
+
+	// Update the hidden form field whenever keyList changes
+	$effect(() => {
+		const combined = keyList.filter(k => k.trim()).join(';');
+		updateConfig.fields.apiKey.value = combined;
+	});
 
 	$effect(() => {
 		if (updateConfig.result?.saved) {
 			toast.success('Settings saved');
 			track(SETTINGS_SAVE);
+			// Refresh local config display
+			window.location.reload();
 		}
 	});
 </script>
@@ -101,11 +104,11 @@
 				API Keys
 			</span>
 			
-			<!-- Hidden input to actually submit the data -->
+			<!-- Hidden input to carry the aggregated value into the form submission -->
 			<input type="hidden" name="apiKey" value={keyList.filter(k => k.trim()).join(';')} />
 
 			<div class="mt-2 space-y-3">
-				{#each keyList as key, i}
+				{#each keyList as _, i}
 					<div class="flex gap-2">
 						<input
 							type="password"
@@ -177,7 +180,7 @@
 			<Icon icon="ph:info-duotone" class="h-4 w-4 shrink-0 text-neutral-400" />
 			<div class="overflow-hidden truncate">
 				Current: <span class="font-medium text-neutral-700 uppercase">{config.provider}</span>
-				&middot; Keys: <span class="font-medium text-neutral-700">{keyList.length}</span>
+				&middot; Keys: <span class="font-medium text-neutral-700">{config.apiKey.split(';').length}</span>
 				{#if config.model} &middot; Model: <span class="font-medium text-neutral-700">{config.model}</span>{/if}
 			</div>
 		</div>

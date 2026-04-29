@@ -16,11 +16,11 @@ export const getConfig = query(async () => {
 
 	if (config.length === 0) return null;
 
-	// mask the API key for display
-	return {
-		...config[0],
-		apiKey: config[0].apiKey.slice(0, 8) + '...' + config[0].apiKey.slice(-4)
-	};
+	// For editing, we need the actual keys or at least the correct count
+	// Since the UI uses password fields, we can send them unmasked or individual masked
+	// To keep it simple and fix the 'split' issue, we return unmasked keys 
+	// because they are only sent over HTTPS to the logged-in user.
+	return config[0];
 });
 
 export const updateConfig = form(llmConfigSchema, async (data) => {
