@@ -65,7 +65,8 @@
 			>
 				<option value="openai">OpenAI</option>
 				<option value="groq">Groq</option>
-				<option value="ollama">Ollama</option>
+				<option value="gemini">Google Gemini</option>
+				<option value="ollama">Ollama (Local)</option>
 				<option value="bedrock">AWS Bedrock</option>
 				<option value="openrouter">OpenRouter</option>
 			</select>
@@ -77,17 +78,21 @@
 		<label class="block">
 			<span class="flex items-center gap-1.5 text-sm text-neutral-600">
 				<Icon icon="ph:lock-key-duotone" class="h-4 w-4 text-neutral-400" />
-				API Key
+				API Key(s)
 			</span>
-			<input
-				{...updateConfig.fields.apiKey.as('password')}
+			<textarea
+				{...updateConfig.fields.apiKey.as('text')}
 				placeholder={config?.apiKey ?? 'Enter your API key'}
 				class="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-			/>
+				rows="3"
+			></textarea>
+			<p class="mt-1 text-xs text-neutral-500">
+				Pro tip: Enter multiple keys separated by semicolons (;) to enable automatic rotation on rate limits.
+			</p>
 			{#if updateConfig.fields.provider.value === 'bedrock'}
-				<p class="mt-1 text-xs text-neutral-500">
-					Format: <code class="rounded bg-neutral-100 px-1">ACCESS_KEY:SECRET_KEY:REGION</code>
-					<br />Or type <code class="rounded bg-neutral-100 px-1">ENVIRONMENT</code> to use EC2 defaults.
+				<p class="mt-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700">
+					<strong>Bedrock Format:</strong> <code class="font-bold">ACCESS_KEY:SECRET_KEY:REGION</code>
+					<br />Separate multiple accounts with semicolons (;).
 				</p>
 			{/if}
 			{#each updateConfig.fields.apiKey.issues() ?? [] as issue (issue.message)}
