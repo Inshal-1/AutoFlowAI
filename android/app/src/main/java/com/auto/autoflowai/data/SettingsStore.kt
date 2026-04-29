@@ -18,6 +18,7 @@ object SettingsKeys {
     val DEVICE_NAME = stringPreferencesKey("device_name")
     val AUTO_CONNECT = booleanPreferencesKey("auto_connect")
     val HAS_ONBOARDED = booleanPreferencesKey("has_onboarded")
+    val CV_INTEGRATION_ENABLED = booleanPreferencesKey("cv_integration_enabled")
 }
 
 class SettingsStore(private val context: Context) {
@@ -60,5 +61,13 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setHasOnboarded(value: Boolean) {
         context.dataStore.edit { it[SettingsKeys.HAS_ONBOARDED] = value }
+    }
+
+    val cvIntegrationEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[SettingsKeys.CV_INTEGRATION_ENABLED] ?: false
+    }
+
+    suspend fun setCvIntegrationEnabled(value: Boolean) {
+        context.dataStore.edit { it[SettingsKeys.CV_INTEGRATION_ENABLED] = value }
     }
 }

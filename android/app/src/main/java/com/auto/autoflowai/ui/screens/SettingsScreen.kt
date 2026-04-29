@@ -76,6 +76,7 @@ fun SettingsScreen() {
 
     val apiKey by app.settingsStore.apiKey.collectAsState(initial = "")
     val serverUrl by app.settingsStore.serverUrl.collectAsState(initial = "wss://tpa.rpaby.pw")
+    val cvEnabled by app.settingsStore.cvIntegrationEnabled.collectAsState(initial = false)
 
     var editingApiKey by remember { mutableStateOf<String?>(null) }
     val displayApiKey = editingApiKey ?: apiKey
@@ -144,14 +145,15 @@ fun SettingsScreen() {
             shape = RoundedCornerShape(12.dp)
         )
         if (editingApiKey != null && editingApiKey != apiKey) {
-            OutlinedButton(
+            Button(
                 onClick = {
                     scope.launch {
                         app.settingsStore.setApiKey(displayApiKey)
                         editingApiKey = null
                     }
                 },
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Save API Key")
             }
@@ -166,17 +168,36 @@ fun SettingsScreen() {
             shape = RoundedCornerShape(12.dp)
         )
         if (editingServerUrl != null && editingServerUrl != serverUrl) {
-            OutlinedButton(
+            Button(
                 onClick = {
                     scope.launch {
                         app.settingsStore.setServerUrl(displayServerUrl)
                         editingServerUrl = null
                     }
                 },
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Save Server URL")
             }
+        }
+
+        // --- Features Section ---
+        SectionHeader("Advanced Features")
+        Button(
+            onClick = {
+                scope.launch {
+                    app.settingsStore.setCvIntegrationEnabled(!cvEnabled)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (cvEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = if (cvEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        ) {
+            Text(if (cvEnabled) "CV Integration: ON" else "CV Integration: OFF")
         }
 
         // --- Connection Section ---
@@ -324,37 +345,45 @@ private fun ChecklistItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isOk) {
-                MaterialTheme.colorScheme.secondaryContainer
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             } else {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
             }
-        )
+        ),
+        border = if (isOk) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = if (isOk) Icons.Filled.CheckCircle else Icons.Filled.Error,
                     contentDescription = if (isOk) "OK" else "Missing",
-                    tint = if (isOk) StatusGreen else MaterialTheme.colorScheme.error
+                    tint = if (isOk) StatusGreen else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
                 )
-                Text(label, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (isOk) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                )
             }
             if (!isOk && actionLabel != null) {
-                OutlinedButton(
+                Button(
                     onClick = onAction,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(actionLabel)
                 }

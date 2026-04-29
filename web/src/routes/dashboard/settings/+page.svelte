@@ -100,6 +100,10 @@
 				<Icon icon="ph:lock-key-duotone" class="h-4 w-4 text-neutral-400" />
 				API Keys
 			</span>
+			
+			<!-- Hidden input to actually submit the data -->
+			<input type="hidden" name="apiKey" value={keyList.filter(k => k.trim()).join(';')} />
+
 			<div class="mt-2 space-y-3">
 				{#each keyList as key, i}
 					<div class="flex gap-2">
