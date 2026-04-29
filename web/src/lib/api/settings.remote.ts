@@ -32,7 +32,87 @@ export const getModelStatuses = query(async () => {
 });
 
 export const validateLlmConfig = command(async () => {
-...
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw new Error('Unauthorized');
+
+	const config = await db
+		.select()
+		.from(llmConfig)
+		.where(eq(llmConfig.userId, locals.user.id))
+		.limit(1);
+
+	if (config.length === 0) throw new Error('No LLM configuration found');
+
+	const { apiKey, provider } = config[0];
+	const keys = apiKey.split(';').map(k => k.trim()).filter(Boolean);
+	
+	const results = [];
+
+	for (const key of keys) {
+		const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+		
+		for (const model of GEMINI_MODELS) {
+			let isAvailable = false;
+			try {
+				// Simple OpenAI-compatible check for Gemini
+				const baseUrl = provider === 'gemini' 
+					? 'https://generativelanguage.googleapis.com/v1beta/openai' 
+					: 'https://api.openai.com/v1';
+				
+				const res = await fetch(`${baseUrl}/chat/completions`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${key}`
+					},
+					body: JSON.stringify({
+						model,
+						messages: [{ role: 'user', content: 'hi' }],
+						max_tokens: 1
+					})
+				});
+
+				// If 404 or 403, it's definitely not available for this key
+				if (res.status === 404 || res.status === 403 || res.status === 401) {
+					isAvailable = false;
+				} else {
+					// 200 or even 429 (rate limit) means the model exists and is accessible
+					isAvailable = true;
+				}
+			} catch (e) {
+				isAvailable = false;
+			}
+
+			// Update or insert status
+			const existing = await db
+				.select()
+				.from(llmModelStatus)
+				.where(and(
+					eq(llmModelStatus.userId, locals.user.id),
+					eq(llmModelStatus.keyHash, keyHash),
+					eq(llmModelStatus.modelId, model)
+				))
+				.limit(1);
+
+			if (existing.length > 0) {
+				await db.update(llmModelStatus)
+					.set({ isAvailable, updatedAt: new Date() })
+					.where(eq(llmModelStatus.id, existing[0].id));
+			} else {
+				await db.insert(llmModelStatus).values({
+					id: crypto.randomUUID(),
+					userId: locals.user.id,
+					keyHash,
+					modelId: model,
+					isAvailable,
+					updatedAt: new Date()
+				});
+			}
+			
+			results.push({ key: key.slice(0, 8) + '...', model, isAvailable });
+		}
+	}
+
 	return { results };
 });
 
