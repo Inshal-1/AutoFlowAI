@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getConfig, getModelStatuses, updateConfig, validateLlmConfig, GEMINI_MODELS } from '$lib/api/settings.remote';
+	import { getConfig, getModelStatuses, updateConfig, validateLlmConfig } from '$lib/api/settings.remote';
+	import { GEMINI_MODELS } from '$lib/constants';
 	import { page } from '$app/state';
 	import Icon from '@iconify/svelte';
 	import { toast } from '$lib/toast';

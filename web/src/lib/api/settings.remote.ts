@@ -3,18 +3,8 @@ import { db } from '$lib/server/db';
 import { llmConfig, llmModelStatus } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { llmConfigSchema } from '$lib/schema/settings';
+import { GEMINI_MODELS } from '$lib/constants';
 import crypto from 'crypto';
-
-// User provided models
-export const GEMINI_MODELS = [
-	'gemini-3.1-flash-lite-preview',
-	'gemini-3.1-flash-live-preview',
-	'gemini-3-flash-preview',
-	'gemini-2.5-pro',
-	'gemini-2.5-flash',
-	'gemini-2.5-flash-lite',
-	'gemini-2.5-flash-lite-preview-09-2025'
-];
 
 export const getConfig = query(async () => {
 	const { locals } = getRequestEvent();
