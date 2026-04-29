@@ -462,28 +462,51 @@ class BedrockProvider implements LLMProvider {
       };
     }
 
-    try {
-      const command = new InvokeModelCommand({
-        modelId: this.model,
-        body: new TextEncoder().encode(JSON.stringify(body)),
-        contentType: "application/json",
-        accept: "application/json",
-      });
+    const maxRetries = 3;
+    let attempt = 0;
 
-      const response = await this.client.send(command, { abortSignal: signal });
-      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    while (attempt <= maxRetries) {
+      try {
+        const command = new InvokeModelCommand({
+          modelId: this.model,
+          body: new TextEncoder().encode(JSON.stringify(body)),
+          contentType: "application/json",
+          accept: "application/json",
+        });
 
-      if (isAnthropic) {
-        return responseBody.content[0].text;
+        const response = await this.client.send(command, { abortSignal: signal });
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+        if (isAnthropic) {
+          return responseBody.content[0].text;
+        }
+        if (isMeta) {
+          return responseBody.generation;
+        }
+        return responseBody.results[0].outputText;
+      } catch (err) {
+        const error = err as Error;
+        const isThrottling =
+          error.name === "ThrottlingException" ||
+          error.message.includes("Too many tokens") ||
+          error.message.includes("Too many requests");
+
+        if (isThrottling && attempt < maxRetries) {
+          attempt++;
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+          console.warn(
+            `[Bedrock] Throttled. Retrying in ${delay}ms (Attempt ${attempt}/${maxRetries})...`
+          );
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+
+        console.error(`[Bedrock] API Error: ${err}`);
+        throw new Error(`Bedrock error: ${error.message}`);
       }
-      if (isMeta) {
-        return responseBody.generation;
-      }
-      return responseBody.results[0].outputText;
-    } catch (err) {
-      console.error(`[Bedrock] API Error: ${err}`);
-      throw new Error(`Bedrock error: ${(err as Error).message}`);
     }
+
+    throw new Error("Bedrock max retries exceeded due to throttling");
   }
 }
 
