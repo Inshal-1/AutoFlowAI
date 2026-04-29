@@ -449,13 +449,14 @@ export async function runAgentLoop(
           hasScrollable,
           foregroundApp: packageName,
           appHints: appHintsStr,
-          isStuck: stuck.isStuck(),
+          isStuck: stuckCount >= 2,
         });
       } else {
-        systemPrompt = legacySystemPrompt;
+        systemPrompt = getSystemPrompt();
       }
 
-      const foregroundLine = packageName
+      const llm = await getLlmProvider(llmConfig);
+
         ? `FOREGROUND_APP: ${packageName}\n\n`
         : "";
       const actionFeedbackLine = lastActionFeedback

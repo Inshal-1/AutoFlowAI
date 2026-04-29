@@ -44,7 +44,7 @@ export async function classifyGoal(
 ): Promise<PipelineResult> {
   const summary = buildCapabilitySummary(caps);
   const { system, user } = getClassifierPrompt(goal, summary);
-  const llm = getLlmProvider(llmConfig);
+  const llm = await getLlmProvider(llmConfig);
 
   let raw: string;
   try {
