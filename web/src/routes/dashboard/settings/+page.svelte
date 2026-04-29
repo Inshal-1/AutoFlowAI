@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getConfig, getModelStatuses, updateConfig, validateLlmConfig } from '$lib/api/settings.remote';
+	import { getConfig, getModelStatuses, updateConfig, validateLlmConfig, pruneInvalidKeys } from '$lib/api/settings.remote';
 	import { GEMINI_MODELS } from '$lib/constants';
 	import { page } from '$app/state';
 	import Icon from '@iconify/svelte';
@@ -14,6 +14,7 @@
 	// Manage keys as a list
 	let keyList = $state(config?.apiKey ? config.apiKey.split(';').map(k => k.trim()) : ['']);
 	let isValidating = $state(false);
+	let isPruning = $state(false);
 	let modelStatuses = $state(initialModelStatuses);
 
 	function addKey() {
@@ -54,6 +55,23 @@
 			toast.error('Validation failed: ' + e.message);
 		} finally {
 			isValidating = false;
+		}
+	}
+
+	async function runPruning() {
+		isPruning = true;
+		try {
+			const res = await pruneInvalidKeys();
+			if (res.removedCount > 0) {
+				toast.success(`Removed ${res.removedCount} invalid keys. ${res.remainingCount} keys remaining.`);
+				window.location.reload();
+			} else {
+				toast.info('No completely invalid keys found.');
+			}
+		} catch (e: any) {
+			toast.error('Pruning failed: ' + e.message);
+		} finally {
+			isPruning = false;
 		}
 	}
 
@@ -166,7 +184,7 @@
 			/>
 		</label>
 
-		<div class="flex gap-3">
+		<div class="flex flex-wrap gap-3">
 			<button
 				type="submit"
 				class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
@@ -186,7 +204,23 @@
 					Validating...
 				{:else}
 					<Icon icon="ph:shield-check-duotone" class="h-4 w-4" />
-					Validate Keys & Models
+					Validate Keys
+				{/if}
+			</button>
+
+			<button
+				type="button"
+				onclick={runPruning}
+				disabled={isPruning || !config || modelStatuses.length === 0}
+				class="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+				title="Remove keys that failed validation for all models"
+			>
+				{#if isPruning}
+					<Icon icon="ph:circle-notch-duotone" class="h-4 w-4 animate-spin" />
+					Pruning...
+				{:else}
+					<Icon icon="ph:broom-duotone" class="h-4 w-4" />
+					Prune Invalid
 				{/if}
 			</button>
 		</div>
