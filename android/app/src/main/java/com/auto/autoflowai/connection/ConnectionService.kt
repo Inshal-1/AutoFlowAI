@@ -31,10 +31,12 @@ import android.net.Uri
 import android.provider.Settings
 import com.auto.autoflow.model.StopGoalMessage
 import com.auto.autoflow.overlay.AgentOverlay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ConnectionService : LifecycleService() {
 
@@ -155,9 +157,11 @@ class ConnectionService : LifecycleService() {
                                     Log.w(TAG, "Overlay show failed: ${e.message}")
                                 }
                             }
-                            val apps = getInstalledApps()
-                            webSocket?.sendTyped(AppsMessage(apps = apps))
-                            Log.i(TAG, "Sent ${apps.size} installed apps to server")
+                            launch(Dispatchers.IO) {
+                                val apps = getInstalledApps()
+                                webSocket?.sendTyped(AppsMessage(apps = apps))
+                                Log.i(TAG, "Sent ${apps.size} installed apps to server")
+                            }
                         }
                     }
                 }
