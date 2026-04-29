@@ -261,7 +261,6 @@ export async function runAgentLoop(
   } = options;
 
   const sessionId = crypto.randomUUID();
-  const llm = getLlmProvider(llmConfig);
   const stuck = createStuckDetector();
 
   // Use legacy prompt if not in pipeline mode (backward compat)
@@ -457,6 +456,7 @@ export async function runAgentLoop(
 
       const llm = await getLlmProvider(llmConfig);
 
+      const foregroundLine = packageName
         ? `FOREGROUND_APP: ${packageName}\n\n`
         : "";
       const actionFeedbackLine = lastActionFeedback
