@@ -364,8 +364,8 @@ class OpenAICompatibleProvider implements LLMProvider {
           signal,
         });
 
-        if (response.status === 429) {
-          console.warn(`[${this.providerName}] Key limit reached (429). Rotating...`);
+        if (response.status === 429 || response.status === 503) {
+          console.warn(`[${this.providerName}] Key limit or high demand reached (${response.status}). Rotating...`);
           continue;
         }
 
