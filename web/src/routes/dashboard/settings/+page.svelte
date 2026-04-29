@@ -84,6 +84,12 @@
 				placeholder={config?.apiKey ?? 'Enter your API key'}
 				class="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
 			/>
+			{#if updateConfig.fields.provider.value === 'bedrock'}
+				<p class="mt-1 text-xs text-neutral-500">
+					Format: <code class="rounded bg-neutral-100 px-1">ACCESS_KEY:SECRET_KEY:REGION</code>
+					<br />Or type <code class="rounded bg-neutral-100 px-1">ENVIRONMENT</code> to use EC2 defaults.
+				</p>
+			{/if}
 			{#each updateConfig.fields.apiKey.issues() ?? [] as issue (issue.message)}
 				<p class="text-sm text-red-600">{issue.message}</p>
 			{/each}

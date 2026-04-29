@@ -380,16 +380,31 @@ class BedrockProvider implements LLMProvider {
   private client: BedrockRuntimeClient;
   private model: string;
 
-  constructor(model: string) {
+  constructor(model: string, apiKey?: string) {
+    let credentials = undefined;
+    let region = env.AWS_REGION;
+
+    // Support composite keys: "ACCESS_KEY:SECRET_KEY" or "ACCESS_KEY:SECRET_KEY:REGION"
+    if (apiKey && apiKey.includes(":")) {
+      const parts = apiKey.split(":");
+      if (parts.length >= 2) {
+        credentials = {
+          accessKeyId: parts[0],
+          secretAccessKey: parts[1],
+        };
+        if (parts[2]) region = parts[2];
+      }
+    } else if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
+      // Fallback to server env if no valid composite key provided
+      credentials = {
+        accessKeyId: env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+
     this.client = new BedrockRuntimeClient({
-      region: env.AWS_REGION,
-      credentials:
-        env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
-          ? {
-              accessKeyId: env.AWS_ACCESS_KEY_ID,
-              secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-            }
-          : undefined,
+      region,
+      credentials,
     });
     this.model = model;
   }
@@ -447,23 +462,28 @@ class BedrockProvider implements LLMProvider {
       };
     }
 
-    const command = new InvokeModelCommand({
-      modelId: this.model,
-      body: new TextEncoder().encode(JSON.stringify(body)),
-      contentType: "application/json",
-      accept: "application/json",
-    });
+    try {
+      const command = new InvokeModelCommand({
+        modelId: this.model,
+        body: new TextEncoder().encode(JSON.stringify(body)),
+        contentType: "application/json",
+        accept: "application/json",
+      });
 
-    const response = await this.client.send(command, { abortSignal: signal });
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+      const response = await this.client.send(command, { abortSignal: signal });
+      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-    if (isAnthropic) {
-      return responseBody.content[0].text;
+      if (isAnthropic) {
+        return responseBody.content[0].text;
+      }
+      if (isMeta) {
+        return responseBody.generation;
+      }
+      return responseBody.results[0].outputText;
+    } catch (err) {
+      console.error(`[Bedrock] API Error: ${err}`);
+      throw new Error(`Bedrock error: ${(err as Error).message}`);
     }
-    if (isMeta) {
-      return responseBody.generation;
-    }
-    return responseBody.results[0].outputText;
   }
 }
 
@@ -472,7 +492,10 @@ class BedrockProvider implements LLMProvider {
  */
 export function getLlmProvider(config: LLMConfig): LLMProvider {
   if (config.provider === "bedrock") {
-    return new BedrockProvider(config.model ?? getDefaultModel("bedrock"));
+    return new BedrockProvider(
+      config.model ?? getDefaultModel("bedrock"),
+      config.apiKey
+    );
   }
 
   const baseUrl =
