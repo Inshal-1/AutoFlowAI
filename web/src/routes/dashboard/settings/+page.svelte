@@ -9,6 +9,26 @@
 	const config = await getConfig();
 	const layoutData = page.data;
 
+	// Manage keys as a list
+	let keyList = $state(config?.apiKey ? config.apiKey.split(';').map(k => k.trim()) : ['']);
+
+	// Keep the form field in sync with the list
+	$effect(() => {
+		updateConfig.fields.apiKey.value = keyList.filter(k => k.trim()).join(';');
+	});
+
+	function addKey() {
+		keyList = [...keyList, ''];
+	}
+
+	function removeKey(index: number) {
+		if (keyList.length > 1) {
+			keyList = keyList.filter((_, i) => i !== index);
+		} else {
+			keyList = [''];
+		}
+	}
+
 	$effect(() => {
 		if (updateConfig.result?.saved) {
 			toast.success('Settings saved');
@@ -53,7 +73,7 @@
 		<h3 class="font-semibold">LLM Provider</h3>
 	</div>
 
-	<form {...updateConfig} class="space-y-4">
+	<form {...updateConfig} class="space-y-6">
 		<label class="block">
 			<span class="flex items-center gap-1.5 text-sm text-neutral-600">
 				<Icon icon="ph:plugs-connected-duotone" class="h-4 w-4 text-neutral-400" />
@@ -75,30 +95,57 @@
 			{/each}
 		</label>
 
-		<label class="block">
+		<div>
 			<span class="flex items-center gap-1.5 text-sm text-neutral-600">
 				<Icon icon="ph:lock-key-duotone" class="h-4 w-4 text-neutral-400" />
-				API Key(s)
+				API Keys
 			</span>
-			<textarea
-				{...updateConfig.fields.apiKey.as('text')}
-				placeholder={config?.apiKey ?? 'Enter your API key'}
-				class="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-				rows="3"
-			></textarea>
-			<p class="mt-1 text-xs text-neutral-500">
-				Pro tip: Enter multiple keys separated by semicolons (;) to enable automatic rotation on rate limits.
+			<div class="mt-2 space-y-3">
+				{#each keyList as key, i}
+					<div class="flex gap-2">
+						<input
+							type="password"
+							bind:value={keyList[i]}
+							placeholder="Enter API key"
+							class="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+						/>
+						<button
+							type="button"
+							onclick={() => removeKey(i)}
+							class="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-400 hover:bg-red-50 hover:text-red-500"
+							title="Remove key"
+						>
+							<Icon icon="ph:trash-duotone" class="h-4 w-4" />
+						</button>
+					</div>
+				{/each}
+			</div>
+			
+			<button
+				type="button"
+				onclick={addKey}
+				class="mt-3 flex items-center gap-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900"
+			>
+				<Icon icon="ph:plus-circle-duotone" class="h-4 w-4" />
+				Add another key
+			</button>
+
+			<p class="mt-3 text-xs text-neutral-500">
+				<span class="font-semibold text-emerald-600">Load Balanced:</span> AutoFlow will cycle through your keys for every request to maximize your RPM limits.
 			</p>
+
 			{#if updateConfig.fields.provider.value === 'bedrock'}
-				<p class="mt-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700">
-					<strong>Bedrock Format:</strong> <code class="font-bold">ACCESS_KEY:SECRET_KEY:REGION</code>
-					<br />Separate multiple accounts with semicolons (;).
-				</p>
+				<div class="mt-3 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+					<p class="font-bold">Bedrock Format:</p>
+					<p class="mt-1">Use <code class="font-mono bg-blue-100 px-1">ACCESS_KEY:SECRET_KEY:REGION</code></p>
+					<p class="mt-1 opacity-70">Example: <code class="font-mono">AKIA...:SECRET...:us-east-1</code></p>
+				</div>
 			{/if}
+
 			{#each updateConfig.fields.apiKey.issues() ?? [] as issue (issue.message)}
-				<p class="text-sm text-red-600">{issue.message}</p>
+				<p class="mt-2 text-sm text-red-600">{issue.message}</p>
 			{/each}
-		</label>
+		</div>
 
 		<label class="block">
 			<span class="flex items-center gap-1.5 text-sm text-neutral-600">
@@ -114,18 +161,21 @@
 
 		<button
 			type="submit"
-			class="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+			class="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2"
 		>
 			<Icon icon="ph:floppy-disk-duotone" class="h-4 w-4" />
-			Save
+			Save All Settings
 		</button>
 	</form>
 
 	{#if config}
-		<div class="mt-4 flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
+		<div class="mt-6 flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2.5 text-xs text-neutral-500">
 			<Icon icon="ph:info-duotone" class="h-4 w-4 shrink-0 text-neutral-400" />
-			Current: {config.provider} &middot; Key: {config.apiKey}
-			{#if config.model} &middot; Model: {config.model}{/if}
+			<div class="overflow-hidden truncate">
+				Current: <span class="font-medium text-neutral-700 uppercase">{config.provider}</span>
+				&middot; Keys: <span class="font-medium text-neutral-700">{keyList.length}</span>
+				{#if config.model} &middot; Model: <span class="font-medium text-neutral-700">{config.model}</span>{/if}
+			</div>
 		</div>
 	{/if}
 </div>

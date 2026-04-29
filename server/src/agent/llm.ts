@@ -7,8 +7,8 @@
  *
  * All providers support Multi-Key Rotation:
  * Pass multiple keys separated by semicolons (e.g. "key1;key2;key3").
- * If a rate limit (429) or ThrottlingException occurs, the provider
- * automatically cycles to the next key and retries.
+ * The provider automatically cycles through keys for EVERY request (Round Robin)
+ * to maximize RPM (Requests Per Minute) while keeping full context.
  */
 
 import {
@@ -144,16 +144,22 @@ class KeyRotator {
     }
   }
 
-  getCurrentKey(): string {
-    return this.keys[this.currentIndex] || "";
+  /**
+   * Returns the next key in the sequence (Round Robin).
+   * Switches key for every single request to balance RPM load.
+   */
+  getRotateKey(): string {
+    if (this.keys.length === 0) return "";
+    const key = this.keys[this.currentIndex];
+    this.currentIndex = (this.currentIndex + 1) % this.keys.length;
+    return key;
   }
 
+  /** Failover support: force move to next key if current one is exhausted */
   next(): boolean {
-    if (this.currentIndex < this.keys.length - 1) {
-      this.currentIndex++;
-      return true;
-    }
-    return false;
+    if (this.keys.length <= 1) return false;
+    this.currentIndex = (this.currentIndex + 1) % this.keys.length;
+    return true;
   }
 
   get count(): number {
@@ -169,13 +175,11 @@ class BedrockProvider implements LLMProvider {
   constructor(model: string, apiKeyString?: string) {
     this.rotator = new KeyRotator(apiKeyString || "");
     this.model = model;
-    this.initClient();
   }
 
-  private initClient() {
+  private initClient(apiKey: string) {
     let credentials = undefined;
     let region = env.AWS_REGION;
-    const apiKey = this.rotator.getCurrentKey();
 
     if (apiKey === "ENVIRONMENT") {
         if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
@@ -233,9 +237,17 @@ class BedrockProvider implements LLMProvider {
       };
     }
 
-    const maxRetriesPerKey = 2;
-    while (true) {
+    const maxKeysToTry = Math.max(1, this.rotator.count);
+    let keysTried = 0;
+
+    while (keysTried < maxKeysToTry) {
+      const apiKey = this.rotator.getRotateKey();
+      this.initClient(apiKey);
+      keysTried++;
+
+      const maxRetriesPerKey = 1;
       let attempt = 0;
+
       while (attempt <= maxRetriesPerKey) {
         try {
           const command = new InvokeModelCommand({
@@ -258,23 +270,20 @@ class BedrockProvider implements LLMProvider {
           if (isThrottling) {
             if (attempt < maxRetriesPerKey) {
               attempt++;
-              const delay = Math.pow(2, attempt) * 1000;
-              console.warn(`[Bedrock] Throttled. Retrying in ${delay}ms...`);
+              const delay = 1000;
+              console.warn(`[Bedrock] Key throttled. Retrying same key in ${delay}ms...`);
               await new Promise((r) => setTimeout(r, delay));
               continue;
-            } else if (this.rotator.next()) {
-              console.warn(`[Bedrock] Key rate limited. Cycling keys...`);
-              this.initClient();
-              break;
+            } else {
+              console.warn(`[Bedrock] Key limit reached. Rotating to next key...`);
+              break; // exit inner loop, while(keysTried) will pick next key
             }
           }
           throw err;
         }
       }
-      if (attempt > maxRetriesPerKey && !this.rotator.next()) {
-         throw new Error("Bedrock max retries and all keys exhausted");
-      }
     }
+    throw new Error("Bedrock: All available API keys reached rate limits.");
   }
 }
 
@@ -311,8 +320,13 @@ class OpenAICompatibleProvider implements LLMProvider {
       messages.push({ role: "user", content: userPrompt });
     }
 
-    while (true) {
-      const apiKey = this.rotator.getCurrentKey();
+    const maxKeysToTry = Math.max(1, this.rotator.count);
+    let keysTried = 0;
+
+    while (keysTried < maxKeysToTry) {
+      const apiKey = this.rotator.getRotateKey();
+      keysTried++;
+
       try {
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
           method: "POST",
@@ -330,9 +344,9 @@ class OpenAICompatibleProvider implements LLMProvider {
           signal,
         });
 
-        if (response.status === 429 && this.rotator.next()) {
-          console.warn(`[${this.providerName}] Rate limited (429). Cycling keys...`);
-          continue;
+        if (response.status === 429) {
+          console.warn(`[${this.providerName}] Key limit reached (429). Rotating...`);
+          continue; // try next key
         }
 
         if (!response.ok) {
@@ -343,12 +357,13 @@ class OpenAICompatibleProvider implements LLMProvider {
         const data = (await response.json()) as any;
         return data.choices[0]?.message?.content ?? "";
       } catch (err) {
-        if (err instanceof Error && err.message.includes("429") && this.rotator.next()) {
-           continue;
+        if (err instanceof Error && err.message.includes("429")) {
+           continue; // try next key
         }
         throw err;
       }
     }
+    throw new Error(`${this.providerName}: All available API keys reached rate limits.`);
   }
 }
 
